@@ -1,0 +1,24 @@
+# Dependencies
+frontend/node_modules/
+
+# Build output
+web/dist/
+
+# Go binary
+bin/
+
+# SQLite database
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# OS files
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.env

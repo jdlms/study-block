@@ -19,6 +19,12 @@
   let midnightTimer;
   let today = startOfToday();
 
+  let isMobile = window.matchMedia('(max-width: 720px)').matches;
+
+  function handleResize() {
+    isMobile = window.matchMedia('(max-width: 720px)').matches;
+  }
+
   let colorOverrides = JSON.parse(localStorage.getItem('study-blocks-colors') || '{}');
   let colorInput;
   let colorTarget = '';
@@ -113,10 +119,15 @@
   onMount(() => {
     load();
     scheduleMidnightRefresh();
-    return () => clearTimeout(midnightTimer);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(midnightTimer);
+      window.removeEventListener('resize', handleResize);
+    };
   });
 
-  $: dates = rollingDates();
+  $: allDates = rollingDates();
+  $: dates = isMobile ? allDates.slice(-10) : allDates;
   $: labels = dates.map(shortLabel);
   $: totals = entries.reduce((acc, entry) => {
     const key = `${entry.date}:${entry.subject}`;
@@ -226,26 +237,19 @@
   :global(body) {
     margin: 0;
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background:
-      radial-gradient(circle at top, rgba(71, 85, 105, 0.18), transparent 35%),
-      linear-gradient(180deg, #020617, #0f172a);
+    background: #020617;
     color: #f8fafc;
     min-height: 100vh;
   }
 
+  :global(body) {
+    background:
+      radial-gradient(circle at top, rgba(71, 85, 105, 0.18), transparent 35%),
+      linear-gradient(180deg, #020617, #0f172a);
+  }
+
   :global(*) {
     box-sizing: border-box;
-  }
-
-  .hero {
-    text-align: center;
-    margin-bottom: 3rem;
-  }
-
-  .logo {
-    font-size: 3rem;
-    line-height: 1;
-    margin-bottom: 0.75rem;
   }
 
   .shell {

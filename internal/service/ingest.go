@@ -57,13 +57,23 @@ func (s *IngestService) CreateEntry(date, subject string, minutes int, ts time.T
 func (s *IngestService) ParseTelegramMessage(text string, ts time.Time) (model.Entry, error) {
 	parts := strings.Fields(strings.TrimSpace(text))
 	if len(parts) != 2 {
-		return model.Entry{}, fmt.Errorf("expected '<minutes> <subject>'")
+		return model.Entry{}, fmt.Errorf("expected '<minutes> <subject>' or '<subject> <minutes>'")
 	}
-	minutes, err := strconv.Atoi(parts[0])
-	if err != nil || minutes <= 0 {
-		return model.Entry{}, fmt.Errorf("minutes must be a positive integer")
+
+	var minutes int
+	var subject string
+
+	if m, err := strconv.Atoi(parts[0]); err == nil && m > 0 {
+		minutes = m
+		subject = parts[1]
+	} else if m, err := strconv.Atoi(parts[1]); err == nil && m > 0 {
+		minutes = m
+		subject = parts[0]
+	} else {
+		return model.Entry{}, fmt.Errorf("one part must be a positive number of minutes")
 	}
-	return s.CreateEntry(ts.Format(time.DateOnly), parts[1], minutes, ts)
+
+	return s.CreateEntry(ts.Format(time.DateOnly), subject, minutes, ts)
 }
 
 func (s *IngestService) ListEntries(from, to string) ([]model.Entry, error) {

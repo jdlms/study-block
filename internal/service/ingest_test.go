@@ -36,6 +36,18 @@ func TestParseTelegramMessage(t *testing.T) {
 	if entry.Date != ts.Format(time.DateOnly) {
 		t.Fatalf("date = %q, want %q", entry.Date, ts.Format(time.DateOnly))
 	}
+
+	// subject-first format
+	entry2, err := svc.ParseTelegramMessage("Math 40", ts)
+	if err != nil {
+		t.Fatalf("ParseTelegramMessage(subject first) error = %v", err)
+	}
+	if entry2.Subject != "math" {
+		t.Fatalf("subject = %q, want math", entry2.Subject)
+	}
+	if entry2.Minutes != 40 {
+		t.Fatalf("minutes = %d, want 40", entry2.Minutes)
+	}
 }
 
 func TestParseTelegramMessageRejectsInvalidInput(t *testing.T) {

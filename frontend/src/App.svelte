@@ -188,9 +188,6 @@
 />
 
 <div class="shell">
-  <section class="hero">
-    <div class="logo" aria-hidden="true">🧗🏻</div>
-  </section>
   <div class="card">
     <div class="header">
       <h2>Study Blocks</h2>

@@ -1,0 +1,13 @@
+services:
+  study-blocks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: study-blocks:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - /opt/data/study-blocks:/app/data
+    restart: unless-stopped

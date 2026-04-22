@@ -177,7 +177,7 @@
 </script>
 
 <svelte:head>
-  <title>study-blocks</title>
+  <title>🧗🏻 Study Blocks</title>
 </svelte:head>
 
 <input

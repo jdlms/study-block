@@ -3,6 +3,7 @@ package handler
 import (
 	"io/fs"
 	"net/http"
+	pathpkg "path"
 	"strings"
 
 	"study-blocks/web"
@@ -16,14 +17,19 @@ func RegisterFrontend(mux *http.ServeMux) error {
 
 	fileServer := http.FileServer(http.FS(dist))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := strings.TrimPrefix(r.URL.Path, "/")
-		if path == "" {
+		requestedPath := strings.TrimPrefix(r.URL.Path, "/")
+		if requestedPath == "" {
 			http.ServeFileFS(w, r, dist, "index.html")
 			return
 		}
 
-		if _, err := fs.Stat(dist, path); err == nil {
+		if _, err := fs.Stat(dist, requestedPath); err == nil {
 			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		if pathpkg.Ext(requestedPath) != "" {
+			http.NotFound(w, r)
 			return
 		}
 

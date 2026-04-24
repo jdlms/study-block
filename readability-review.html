@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Blocks Readability Review</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: rgba(17, 24, 39, 0.78);
+      --panel-2: rgba(30, 41, 59, 0.72);
+      --text: #e5eefb;
+      --muted: #9fb0cc;
+      --accent: #7c6ef0;
+      --accent-2: #22c55e;
+      --warn: #f59e0b;
+      --danger: #f87171;
+      --border: rgba(148, 163, 184, 0.18);
+      --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      --radius: 20px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(124, 110, 240, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(34, 197, 94, 0.10), transparent 22%),
+        linear-gradient(180deg, #020617 0%, var(--bg) 100%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.55;
+    }
+
+    .wrap {
+      width: min(1100px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 40px 0 64px;
+    }
+
+    .hero {
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.72));
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(124, 110, 240, 0.15);
+      color: #cfc7ff;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    h1, h2, h3 { margin: 0 0 12px; line-height: 1.15; }
+    h1 { font-size: clamp(2rem, 4vw, 3.2rem); }
+    h2 { font-size: 1.35rem; margin-bottom: 16px; }
+    h3 { font-size: 1rem; margin-bottom: 10px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    strong { color: var(--text); }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .summary-card,
+    .section,
+    .item {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card {
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .summary-card .label {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .summary-card .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .section {
+      border-radius: var(--radius);
+      padding: 22px;
+      margin-bottom: 24px;
+    }
+
+    .section-intro {
+      margin-bottom: 18px;
+    }
+
+    .item {
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.58), rgba(17, 24, 39, 0.75));
+    }
+
+    .item:last-child { margin-bottom: 0; }
+
+    .item-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .high { background: rgba(248, 113, 113, 0.14); color: #fecaca; }
+    .medium { background: rgba(245, 158, 11, 0.14); color: #fcd34d; }
+    .low { background: rgba(34, 197, 94, 0.14); color: #bbf7d0; }
+    .note { background: rgba(124, 110, 240, 0.14); color: #ddd6fe; }
+
+    ul {
+      margin: 10px 0 0 18px;
+      padding: 0;
+      color: var(--muted);
+    }
+
+    li { margin-bottom: 6px; }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 8px;
+      padding: 0.12rem 0.4rem;
+      color: #dbeafe;
+      font-size: 0.95em;
+    }
+
+    pre {
+      margin: 12px 0;
+      padding: 14px;
+      overflow: auto;
+      border-radius: 14px;
+      background: #0f172a;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: #dbeafe;
+    }
+
+    .sidebar .section { position: sticky; top: 20px; }
+
+    .priority-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .priority {
+      border-radius: 14px;
+      padding: 12px 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+    }
+
+    .priority b { display: block; margin-bottom: 4px; }
+
+    .footer {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .grid, .summary {
+        grid-template-columns: 1fr;
+      }
+      .sidebar .section { position: static; }
+      .wrap { width: min(100vw - 20px, 1100px); padding-top: 20px; }
+      .hero, .section { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <div class="eyebrow">Repository Review</div>
+      <h1>Study Blocks: Readability &amp; Idiomatic Review</h1>
+      <p>
+        Overall, the repo is <strong>already pretty solid</strong>: small, coherent, and easy to navigate.
+        The biggest improvement areas are less about bad code and more about <strong>concept consistency</strong>,
+        <strong>splitting multi-purpose files</strong>, and tightening a few Go/Svelte idioms.
+      </p>
+
+      <div class="summary">
+        <div class="summary-card">
+          <div class="label">Overall assessment</div>
+          <div class="value">Good foundation</div>
+          <p>Readable and compact, with a few concentrated cleanup opportunities.</p>
+        </div>
+        <div class="summary-card">
+          <div class="label">Biggest issue</div>
+          <div class="value">Spec drift</div>
+          <p>The repo tells slightly different stories in docs vs implementation.</p>
+        </div>
+        <div class="summary-card">
+          <div class="label">Highest leverage</div>
+          <div class="value">File separation</div>
+          <p>Split larger files by concern, especially Telegram and frontend logic.</p>
+        </div>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main>
+        <section class="section">
+          <h2>Top opportunities</h2>
+          <p class="section-intro">These are the most worthwhile improvements from a readability and idiomatic point of view.</p>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge high">High priority</span>
+              <h3><code>internal/service/telegram.go</code> is doing too much</h3>
+            </div>
+            <p>The file currently mixes transport types, polling, command handling, formatting, and Telegram API calls.</p>
+            <ul>
+              <li><strong>Suggested split:</strong> <code>telegram_client.go</code>, <code>telegram_handler.go</code>, maybe <code>telegram_format.go</code>.</li>
+              <li><strong>Why:</strong> Smaller files with one concern are more idiomatic and easier to skim in Go.</li>
+            </ul>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge high">High priority</span>
+              <h3><code>SPEC.md</code> and implementation have drifted apart</h3>
+            </div>
+            <p>There are multiple concept mismatches that reduce trust in the repo as documentation.</p>
+            <ul>
+              <li>Spec says <code>Blocks</code>, code uses <code>Minutes</code>.</li>
+              <li>Spec says chart is stacked; frontend config uses <code>stacked: false</code>.</li>
+              <li>Spec says frontend refreshes every 60s; code refreshes at midnight only.</li>
+              <li>Spec references files that do not exist, like <code>internal/telegram/poller.go</code>.</li>
+            </ul>
+            <p><strong>Why it matters:</strong> readability includes being able to trust the docs.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge high">High priority</span>
+              <h3><code>frontend/src/App.svelte</code> mixes too many concerns</h3>
+            </div>
+            <p>The component currently contains date helpers, responsive logic, localStorage state, fetch logic, chart shaping, and rendering.</p>
+            <ul>
+              <li><strong>Suggested split:</strong> <code>lib/dates.js</code>, <code>lib/chart.js</code>, <code>lib/colors.js</code>, maybe a small legend component.</li>
+              <li><strong>Why:</strong> Svelte components read best when they mostly describe UI state and markup.</li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="section">
+          <h2>Go-specific readability / idiomatic notes</h2>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3><code>App</code> owns low-level dependencies directly</h3>
+            </div>
+            <p><code>App</code> keeps a raw <code>*store.Store</code> mainly so it can close it later. That leaks storage details into the app root.</p>
+            <pre><code>type App struct {
+    server   *http.Server
+    store    *store.Store
+    telegram *service.TelegramService
+}</code></pre>
+            <p>More idiomatic options would be storing generic closers or lifecycle functions instead.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3>Unused <code>metadataBucket</code> adds cognitive load</h3>
+            </div>
+            <p>The store creates a metadata bucket, but nothing uses it. That looks like incomplete functionality and makes the reader wonder what they missed.</p>
+            <ul>
+              <li>Either remove it for now, or</li>
+              <li>actually use it for Telegram offset persistence, as hinted by the spec.</li>
+            </ul>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3>Prefer named API request types over inline anonymous structs</h3>
+            </div>
+            <p>In <code>internal/handler/api.go</code>, the POST request payload is defined inline. That is okay for tiny handlers, but named request types make the API contract easier to find and reuse.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3>Separate GET and POST bodies into dedicated handler functions</h3>
+            </div>
+            <p>The method switch inside <code>entries</code> is fine, but the handler would read cleaner if the real logic lived in <code>listEntries</code> and <code>createEntry</code>.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3><code>isLocalRequest</code> is brittle</h3>
+            </div>
+            <p>It matches prefixes against <code>r.RemoteAddr</code>, including <code>"localhost:"</code>, which generally will not appear there.</p>
+            <p>Using <code>net.SplitHostPort</code> and comparing parsed host values would be clearer and more robust.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3><code>localURL</code> should use <code>strings.HasPrefix</code></h3>
+            </div>
+            <p>This:</p>
+            <pre><code>if addr[0] == ':' { ... }</code></pre>
+            <p>works because earlier guards protect the empty case, but <code>strings.HasPrefix(addr, ":")</code> expresses intent more clearly.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3>Ignored errors in Telegram HTTP request construction</h3>
+            </div>
+            <p>Calls like <code>http.NewRequestWithContext(...)</code> and <code>json.Marshal(...)</code> are used with <code>_</code> ignored.</p>
+            <p>Even if failure is rare, explicit handling is more idiomatic and avoids making the reader infer that the error is impossible.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3>Telegram polling retries silently</h3>
+            </div>
+            <p><code>Run</code> swallows polling errors and just sleeps and continues. A small log line would make runtime behavior much easier to understand.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge note">Design note</span>
+              <h3>The Bolt key format implies optimizations the code does not use</h3>
+            </div>
+            <p><code>ListEntries</code>, delete-by-ID, and undo all scan broadly even though the key format is date-prefixed.</p>
+            <p>For a small app, that is completely fine. But either using prefix scans or explicitly commenting that full scans are intentional for small datasets would better match reader expectations.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3><code>DeleteLatestEntryForDate</code> returning <code>nil, nil</code> is subtle</h3>
+            </div>
+            <p>That API shape is valid, but readers have to remember that “not found” is represented by a nil entry without an error. Returning <code>ErrNotFound</code> or documenting the convention would be clearer.</p>
+          </article>
+        </section>
+
+        <section class="section">
+          <h2>Frontend readability notes</h2>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3><code>window.matchMedia(...)</code> at module init is a little sharp-edged</h3>
+            </div>
+            <p>It is fine for a purely client-rendered app, but less robust if SSR or pre-rendering ever appears. Initializing in <code>onMount</code> would be safer and more idiomatic.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge medium">Medium</span>
+              <h3>Reactive declarations are dense</h3>
+            </div>
+            <p>The sequence of derived state in <code>App.svelte</code> is idiomatic Svelte, but a lot of transformation logic is embedded inline.</p>
+            <ul>
+              <li><code>buildTotals(entries)</code></li>
+              <li><code>buildDatasets(subjects, dates, totals, ...)</code></li>
+              <li><code>buildChartOptions(...)</code></li>
+            </ul>
+            <p>Helper functions would make the reactive block much easier to scan.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3>There is repeated date formatting noise</h3>
+            </div>
+            <p>Formatting the same dates repeatedly inside dataset creation makes the logic harder to read. Precomputing <code>todayKey</code> and <code>dateKeys</code> would simplify the chart setup.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3>The color swatch should probably be a real button</h3>
+            </div>
+            <p>Using a <code>&lt;span role="button" tabindex="0"&gt;</code> works, but a semantic <code>&lt;button&gt;</code> would be easier to read and more idiomatic HTML.</p>
+          </article>
+        </section>
+
+        <section class="section">
+          <h2>Smaller polish items</h2>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3>Naming could be a touch more explicit</h3>
+            </div>
+            <ul>
+              <li><code>allowed</code> in <code>IngestService</code> could become <code>allowedSubjects</code> or <code>subjectSet</code>.</li>
+              <li><code>fmtDuration</code> could be <code>formatMillis</code> or <code>formatRequestDuration</code>.</li>
+              <li><code>statusWriter</code> could be <code>responseStatusWriter</code>.</li>
+            </ul>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3>Test setup patterns could be more consistent</h3>
+            </div>
+            <p>API and ingest tests repeat store/subject setup. Shared helpers would reduce repetition. Also, pick one cleanup style consistently; <code>t.Cleanup</code> is generally nicer than mixed use of <code>defer</code> and cleanup hooks.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge low">Low</span>
+              <h3>Doc comments would help as the codebase grows</h3>
+            </div>
+            <p>Even under <code>internal/</code>, exported names like <code>App</code>, <code>Config</code>, <code>Store</code>, and <code>TelegramService</code> benefit from brief doc comments once the repo gets bigger.</p>
+          </article>
+
+          <article class="item">
+            <div class="item-head">
+              <span class="badge note">Most important consistency issue</span>
+              <h3>Settle on one conceptual unit: blocks or minutes</h3>
+            </div>
+            <p>This is the single biggest vocabulary mismatch in the repo:</p>
+            <ul>
+              <li>spec talks about blocks</li>
+              <li>code talks about minutes</li>
+              <li>frontend subtitle talks about study minutes</li>
+              <li>Telegram parsing accepts raw minutes</li>
+            </ul>
+            <p>Pick one concept and use it everywhere.</p>
+          </article>
+        </section>
+      </main>
+
+      <aside class="sidebar">
+        <section class="section">
+          <h2>Recommended priority order</h2>
+          <div class="priority-list">
+            <div class="priority">
+              <b>1. Fix spec drift</b>
+              <span>Make docs and code tell the same story.</span>
+            </div>
+            <div class="priority">
+              <b>2. Split <code>telegram.go</code></b>
+              <span>Separate transport, polling, and command handling.</span>
+            </div>
+            <div class="priority">
+              <b>3. Break up <code>App.svelte</code></b>
+              <span>Move helpers and chart shaping out of the component.</span>
+            </div>
+            <div class="priority">
+              <b>4. Tighten a few Go APIs</b>
+              <span><code>isLocalRequest</code>, ignored errors, and not-found semantics.</span>
+            </div>
+            <div class="priority">
+              <b>5. Polish naming and tests</b>
+              <span>Lower priority, but helpful once the bigger issues are done.</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <h2>Net assessment</h2>
+          <p>The repo is already:</p>
+          <ul>
+            <li>small</li>
+            <li>understandable</li>
+            <li>reasonably idiomatic</li>
+            <li>easy to navigate</li>
+          </ul>
+          <p>
+            The main thing holding it back from feeling <strong>cleanly idiomatic</strong>
+            is <strong>concept drift</strong> and a few files doing <strong>multiple jobs at once</strong>,
+            not low-quality code.
+          </p>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footer">
+      Saved as <code>readability-review.html</code>
+    </div>
+  </div>
+</body>
+</html>

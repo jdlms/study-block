@@ -17,6 +17,7 @@
   let loading = true;
   let error = '';
   let midnightTimer;
+  let refreshTimer;
   let today = startOfToday();
 
   let isMobile = window.matchMedia('(max-width: 720px)').matches;
@@ -119,9 +120,11 @@
   onMount(() => {
     load();
     scheduleMidnightRefresh();
+    refreshTimer = setInterval(load, 60000);
     window.addEventListener('resize', handleResize);
     return () => {
       clearTimeout(midnightTimer);
+      clearInterval(refreshTimer);
       window.removeEventListener('resize', handleResize);
     };
   });
@@ -161,7 +164,7 @@
     },
     scales: {
       x: {
-        stacked: false,
+        stacked: true,
         offset: true,
         ticks: {
           color: '#94a3b8',
@@ -173,9 +176,8 @@
         grid: { color: 'rgba(148,163,184,0.08)' },
       },
       y: {
-        stacked: false,
+        stacked: true,
         beginAtZero: true,
-        max: 120,
         ticks: {
           color: '#94a3b8',
           stepSize: 20,

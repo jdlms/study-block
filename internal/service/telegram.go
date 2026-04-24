@@ -18,8 +18,10 @@ type TelegramService struct {
 }
 
 type UpdateResponse struct {
-	OK     bool     `json:"ok"`
-	Result []Update `json:"result"`
+	OK          bool     `json:"ok"`
+	Result      []Update `json:"result"`
+	ErrorCode   int      `json:"error_code"`
+	Description string   `json:"description"`
 }
 
 type Update struct {
@@ -133,9 +135,21 @@ func (s *TelegramService) getUpdates(ctx context.Context, offset int) ([]Update,
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("telegram getUpdates: unexpected status %s", resp.Status)
+	}
 	var out UpdateResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
+	}
+	if !out.OK {
+		if out.Description != "" {
+			return nil, fmt.Errorf("telegram getUpdates: %s", out.Description)
+		}
+		if out.ErrorCode != 0 {
+			return nil, fmt.Errorf("telegram getUpdates: error code %d", out.ErrorCode)
+		}
+		return nil, fmt.Errorf("telegram getUpdates: request failed")
 	}
 	return out.Result, nil
 }

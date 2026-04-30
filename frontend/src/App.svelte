@@ -296,7 +296,7 @@
   onMount(() => {
     load();
     scheduleMidnightRefresh();
-    refreshTimer = setInterval(load, 60000);
+    refreshTimer = setInterval(load, 20 * 60 * 1000);
     window.addEventListener('resize', handleResize);
     return () => {
       clearTimeout(midnightTimer);

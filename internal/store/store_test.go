@@ -66,3 +66,18 @@ func TestDeleteEntryByIDNotFound(t *testing.T) {
 		t.Fatalf("DeleteEntryByID() error = %v, want ErrNotFound", err)
 	}
 }
+
+func TestSaveAndLoadSubjects(t *testing.T) {
+	s := newTestStore(t)
+	subjects := []model.Subject{{Name: "math", Color: "#111111"}, {Name: "physics", Color: "#222222"}}
+	if err := s.SaveSubjects(subjects); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.LoadSubjects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 || got[0].Name != "math" || got[1].Color != "#222222" {
+		t.Fatalf("LoadSubjects() = %#v", got)
+	}
+}

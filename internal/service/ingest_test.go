@@ -77,3 +77,27 @@ func TestUndoRemovesLatestEntryForDate(t *testing.T) {
 		t.Fatalf("Undo() = %#v, want latest entry %#v", undone, latest)
 	}
 }
+
+func TestAddSubjectAndUpdateColor(t *testing.T) {
+	svc := newTestIngestService(t)
+
+	subject, err := svc.AddSubject("writing")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if subject.Name != "writing" {
+		t.Fatalf("name = %q, want writing", subject.Name)
+	}
+
+	updated, err := svc.UpdateSubjectColor("writing", "#123abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Color != "#123abc" {
+		t.Fatalf("color = %q, want #123abc", updated.Color)
+	}
+
+	if _, err := svc.CreateEntry("2026-04-22", "writing", 10, time.Unix(1, 0)); err != nil {
+		t.Fatalf("CreateEntry for added subject error = %v", err)
+	}
+}

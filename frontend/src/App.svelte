@@ -14,7 +14,10 @@
 
   let subjects = [];
   let entries = [];
+  let subjectsSignature = '';
+  let entriesSignature = '';
   let loading = true;
+  let saving = false;
   let error = '';
   let midnightTimer;
   let refreshTimer;
@@ -26,22 +29,77 @@
     isMobile = window.matchMedia('(max-width: 720px)').matches;
   }
 
-  let colorOverrides = JSON.parse(localStorage.getItem('study-blocks-colors') || '{}');
   let colorInput;
   let colorTarget = '';
+  let selectedSubject = '';
+  let editOpen = false;
+  let editDate = null;
+  let editSubject = '';
+  let editMinutes = '';
 
   function openColorPicker(subjectName) {
     colorTarget = subjectName;
     const subject = subjects.find((s) => s.name === subjectName);
     if (!subject) return;
-    colorInput.value = colorOverrides[subjectName] || subject.color;
+    colorInput.value = subject.color;
     colorInput.click();
   }
 
-  function onColorChange(e) {
+  async function onColorChange(e) {
     const newColor = e.target.value;
-    colorOverrides = { ...colorOverrides, [colorTarget]: newColor };
-    localStorage.setItem('study-blocks-colors', JSON.stringify(colorOverrides));
+    if (!colorTarget) {
+      return;
+    }
+    saving = true;
+    error = '';
+    try {
+      const res = await fetch(`/api/subjects/${encodeURIComponent(colorTarget)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color: newColor }),
+      });
+      if (!res.ok) {
+        throw new Error(await res.text() || 'Failed to save color');
+      }
+      const updated = await res.json();
+      subjects = subjects.map((subject) => subject.name === updated.name ? updated : subject);
+    } catch (err) {
+      error = err.message || 'Failed to save color';
+    } finally {
+      saving = false;
+    }
+  }
+
+  async function addSubject() {
+    const name = window.prompt('New topic name');
+    if (name === null) {
+      return;
+    }
+    saving = true;
+    error = '';
+    try {
+      const res = await fetch('/api/subjects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) {
+        throw new Error(await res.text() || 'Failed to add topic');
+      }
+      await load();
+    } catch (err) {
+      error = err.message || 'Failed to add topic';
+    } finally {
+      saving = false;
+    }
+  }
+
+  function toggleSubjectFilter(subjectName) {
+    selectedSubject = selectedSubject === subjectName ? '' : subjectName;
+  }
+
+  function clearSubjectFilter() {
+    selectedSubject = '';
   }
 
   function startOfToday() {
@@ -78,7 +136,11 @@
     if (!item) {
       return '';
     }
-    return dates[item.dataIndex].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return dates[item.dataIndex].toLocaleDateString(undefined, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
   }
 
   function rollingDates() {
@@ -89,6 +151,104 @@
       dates.push(date);
     }
     return dates;
+  }
+
+  function entriesForSubjectAndDate(subjectName, date) {
+    const dateStr = formatDate(date);
+    return entries.filter((entry) => entry.subject === subjectName && entry.date === dateStr);
+  }
+
+  function totalMinutesForSubjectAndDate(subjectName, date) {
+    return entriesForSubjectAndDate(subjectName, date).reduce((sum, entry) => sum + entry.minutes, 0);
+  }
+
+  function syncEditMinutes() {
+    if (!editDate || !editSubject) {
+      editMinutes = '';
+      return;
+    }
+    editMinutes = `${totalMinutesForSubjectAndDate(editSubject, editDate)}`;
+  }
+
+  function openEditModal(date, preferredSubject = '') {
+    if (!date) {
+      return;
+    }
+    editDate = date;
+    editSubject = preferredSubject || selectedSubject || subjects[0]?.name || '';
+    syncEditMinutes();
+    editOpen = true;
+  }
+
+  function closeEditModal() {
+    editOpen = false;
+  }
+
+  async function saveStudyMinutes() {
+    const nextMinutes = Number.parseInt(String(editMinutes ?? '').trim(), 10);
+    if (!Number.isInteger(nextMinutes) || nextMinutes < 0) {
+      error = 'Minutes must be a whole number (0 or more).';
+      return;
+    }
+    if (!editDate || !editSubject) {
+      error = 'Pick a date and topic.';
+      return;
+    }
+
+    saving = true;
+    error = '';
+    try {
+      const existing = entriesForSubjectAndDate(editSubject, editDate);
+      await Promise.all(existing.map(async (entry) => {
+        const res = await fetch(`/api/entries/${entry.id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          throw new Error(await res.text() || 'Failed to update entry');
+        }
+      }));
+
+      if (nextMinutes > 0) {
+        const res = await fetch('/api/entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            date: formatDate(editDate),
+            subject: editSubject,
+            minutes: nextMinutes,
+          }),
+        });
+        if (!res.ok) {
+          throw new Error(await res.text() || 'Failed to update entry');
+        }
+      }
+
+      await load();
+      closeEditModal();
+    } catch (err) {
+      error = err.message || 'Failed to update entry';
+    } finally {
+      saving = false;
+    }
+  }
+
+  function onChartClick(event, _elements, chart) {
+    const nearest = chart.getElementsAtEventForMode(event, 'index', { intersect: false }, false);
+    const item = nearest?.[0];
+
+    let index = item?.index;
+    if (index === undefined) {
+      const xScale = chart?.scales?.x;
+      const x = event?.x;
+      if (xScale && Number.isFinite(x)) {
+        index = Math.round(xScale.getValueForPixel(x));
+      }
+    }
+    if (!Number.isInteger(index) || index < 0 || index >= dates.length) {
+      return;
+    }
+
+    const date = dates[index];
+    const preferredSubject = item ? (filteredDatasets[item.datasetIndex]?.label || '') : '';
+    openEditModal(date, preferredSubject);
   }
 
   async function load() {
@@ -106,9 +266,25 @@
         throw new Error('Failed to load chart data');
       }
 
-      today = startOfToday();
-      subjects = await subjectsRes.json();
-      entries = await entriesRes.json();
+      const nextToday = startOfToday();
+      if (formatDate(nextToday) !== formatDate(today)) {
+        today = nextToday;
+      }
+
+      const nextSubjects = await subjectsRes.json();
+      const nextEntries = await entriesRes.json();
+      const nextSubjectsSignature = JSON.stringify(nextSubjects);
+      const nextEntriesSignature = JSON.stringify(nextEntries);
+
+      if (nextSubjectsSignature !== subjectsSignature) {
+        subjects = nextSubjects;
+        subjectsSignature = nextSubjectsSignature;
+      }
+      if (nextEntriesSignature !== entriesSignature) {
+        entries = nextEntries;
+        entriesSignature = nextEntriesSignature;
+      }
+
       error = '';
     } catch (err) {
       error = err.message || 'Failed to load chart data';
@@ -129,6 +305,9 @@
     };
   });
 
+  $: if (selectedSubject && !subjects.some((subject) => subject.name === selectedSubject)) {
+    selectedSubject = '';
+  }
   $: allDates = rollingDates();
   $: dates = isMobile ? allDates.slice(-10) : allDates;
   $: labels = dates.map(shortLabel);
@@ -139,16 +318,25 @@
   }, new Map());
   $: datasets = subjects.map((subject) => ({
     label: subject.name,
-    data: dates.map((date) => totals.get(`${formatDate(date)}:${subject.name}`) || 0),
-    backgroundColor: colorOverrides[subject.name] || subject.color,
+    data: dates.map((date) => {
+      const value = totals.get(`${formatDate(date)}:${subject.name}`);
+      return value === undefined ? null : value;
+    }),
+    backgroundColor: subject.color,
     borderColor: dates.map((date) => formatDate(date) === formatDate(today) ? 'rgba(248,250,252,0.9)' : 'rgba(0,0,0,0)'),
     borderWidth: dates.map((date) => formatDate(date) === formatDate(today) ? 2 : 0),
     borderSkipped: false,
     borderRadius: 4,
     categoryPercentage: 0.9,
     barPercentage: 1,
+    barThickness: isMobile ? 8 : 12,
+    maxBarThickness: isMobile ? 8 : 12,
+    skipNull: true,
   }));
-  $: data = { labels, datasets };
+  $: filteredDatasets = selectedSubject
+    ? datasets.filter((dataset) => dataset.label === selectedSubject)
+    : datasets;
+  $: data = { labels, datasets: filteredDatasets };
   $: options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -162,9 +350,10 @@
         },
       },
     },
+    onClick: onChartClick,
     scales: {
       x: {
-        stacked: true,
+        stacked: false,
         offset: true,
         ticks: {
           color: '#94a3b8',
@@ -176,7 +365,7 @@
         grid: { color: 'rgba(148,163,184,0.08)' },
       },
       y: {
-        stacked: true,
+        stacked: false,
         beginAtZero: true,
         ticks: {
           color: '#94a3b8',
@@ -203,8 +392,10 @@
 <div class="shell">
   <div class="card">
     <div class="header">
-      <h2>Study Blocks</h2>
-      <p>Estimated study minutes stacked by subject</p>
+      <h2>
+        <button class="title-link" on:click={clearSubjectFilter}>Study Blocks</button>
+      </h2>
+      <p>Estimated study minutes by subject (click a day to edit)</p>
     </div>
 
     {#if error}
@@ -212,23 +403,67 @@
     {:else if loading}
       <div class="state">Loading…</div>
     {:else}
+      {#if saving}
+        <div class="state">Saving…</div>
+      {/if}
       <div class="chart-wrap">
         <Bar {data} {options} />
       </div>
       <div class="legend">
         {#each subjects as subject}
-          <div class="legend-item">
+          <div class="legend-item" class:active={selectedSubject === subject.name}>
             <span
               class="swatch"
               role="button"
               tabindex="0"
-              style={`background: ${colorOverrides[subject.name] || subject.color}`}
+              style={`background: ${subject.color}`}
               on:click={() => openColorPicker(subject.name)}
               on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') openColorPicker(subject.name); }}
             ></span>
-            <span>{subject.name}</span>
+            <span
+              class="subject-name"
+              role="button"
+              tabindex="0"
+              on:click={() => toggleSubjectFilter(subject.name)}
+              on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleSubjectFilter(subject.name); }}
+            >{subject.name}</span>
           </div>
         {/each}
+        <button class="add-topic" on:click={addSubject}>add</button>
+      </div>
+    {/if}
+
+    {#if editOpen}
+      <div
+        class="modal-backdrop"
+        role="button"
+        tabindex="0"
+        on:click|self={closeEditModal}
+        on:keydown={(e) => { if (e.key === 'Escape') closeEditModal(); }}
+      >
+        <div class="modal" role="dialog" aria-modal="true" tabindex="-1">
+          <h3>
+            {#if editDate}
+              {editDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
+            {/if}
+          </h3>
+          <label>
+            Topic
+            <select bind:value={editSubject} on:change={syncEditMinutes}>
+              {#each subjects as subject}
+                <option value={subject.name}>{subject.name}</option>
+              {/each}
+            </select>
+          </label>
+          <label>
+            Minutes
+            <input type="number" min="0" step="1" bind:value={editMinutes} />
+          </label>
+          <div class="modal-actions">
+            <button type="button" on:click={closeEditModal}>Cancel</button>
+            <button type="button" on:click={saveStudyMinutes}>Save</button>
+          </div>
+        </div>
       </div>
     {/if}
   </div>
@@ -275,6 +510,11 @@
     font-size: 1.2rem;
   }
 
+  .title-link {
+    all: unset;
+    cursor: pointer;
+  }
+
   .header p {
     margin: 0 0 1rem;
     color: #94a3b8;
@@ -290,6 +530,7 @@
     margin-top: 20px;
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 12px 16px;
   }
 
@@ -297,6 +538,30 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+    color: #cbd5e1;
+  }
+
+  .legend-item.active .subject-name {
+    color: #f8fafc;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .subject-name {
+    cursor: pointer;
+  }
+
+  .add-topic {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    text-transform: lowercase;
+    font-size: 0.9rem;
+  }
+
+  .add-topic:hover {
     color: #cbd5e1;
   }
 
@@ -310,6 +575,61 @@
 
   .swatch:hover {
     transform: scale(1.4);
+  }
+
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.55);
+    display: grid;
+    place-items: center;
+    z-index: 20;
+  }
+
+  .modal {
+    width: min(360px, calc(100vw - 2rem));
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 14px;
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .modal h3 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .modal label {
+    display: grid;
+    gap: 6px;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+  }
+
+  .modal select,
+  .modal input {
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+    padding: 8px;
+    background: rgba(2, 6, 23, 0.7);
+    color: #f8fafc;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .modal-actions button {
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+    padding: 6px 10px;
+    background: rgba(15, 23, 42, 0.7);
+    color: #f8fafc;
+    cursor: pointer;
   }
 
   .state {

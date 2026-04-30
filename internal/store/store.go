@@ -18,6 +18,7 @@ import (
 var (
 	entriesBucket  = []byte("entries")
 	metadataBucket = []byte("metadata")
+	subjectsKey    = []byte("subjects")
 	ErrNotFound    = errors.New("not found")
 )
 
@@ -138,6 +139,31 @@ func (s *Store) ClearEntries() error {
 		}
 		_, err := tx.CreateBucketIfNotExists(entriesBucket)
 		return err
+	})
+}
+
+func (s *Store) LoadSubjects() ([]model.Subject, error) {
+	var subjects []model.Subject
+	err := s.db.View(func(tx *bbolt.Tx) error {
+		buf := tx.Bucket(metadataBucket).Get(subjectsKey)
+		if len(buf) == 0 {
+			return nil
+		}
+		return json.Unmarshal(buf, &subjects)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return subjects, nil
+}
+
+func (s *Store) SaveSubjects(subjects []model.Subject) error {
+	return s.db.Update(func(tx *bbolt.Tx) error {
+		buf, err := json.Marshal(subjects)
+		if err != nil {
+			return err
+		}
+		return tx.Bucket(metadataBucket).Put(subjectsKey, buf)
 	})
 }
 

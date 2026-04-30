@@ -19,7 +19,14 @@ var palette = []string{
 func SubjectsFromNames(names []string) []Subject {
 	out := make([]Subject, 0, len(names))
 	for i, name := range names {
-		out = append(out, Subject{Name: name, Color: palette[i%len(palette)]})
+		out = append(out, Subject{Name: name, Color: DefaultSubjectColor(i)})
 	}
 	return out
+}
+
+func DefaultSubjectColor(index int) string {
+	if index < 0 {
+		index = 0
+	}
+	return palette[index%len(palette)]
 }

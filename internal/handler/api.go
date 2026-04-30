@@ -23,6 +23,7 @@ func NewAPIHandler(ingest *service.IngestService, enableLocalTestRoutes bool) *A
 func (h *APIHandler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/api/health", h.health)
 	mux.HandleFunc("/api/subjects", h.subjects)
+	mux.HandleFunc("/api/subjects/", h.subjectByName)
 	mux.HandleFunc("/api/entries", h.entries)
 	mux.HandleFunc("/api/entries/", h.entryByID)
 	mux.HandleFunc("/api/testing/clear", h.clear)
@@ -31,8 +32,52 @@ func (h *APIHandler) Register(mux *http.ServeMux) {
 func (h *APIHandler) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
-func (h *APIHandler) subjects(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, h.ingest.Subjects())
+func (h *APIHandler) subjects(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, http.StatusOK, h.ingest.Subjects())
+	case http.MethodPost:
+		var req struct {
+			Name string `json:"name"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		subject, err := h.ingest.AddSubject(req.Name)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, http.StatusCreated, subject)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (h *APIHandler) subjectByName(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	name := strings.TrimPrefix(r.URL.Path, "/api/subjects/")
+	if strings.TrimSpace(name) == "" {
+		http.NotFound(w, r)
+		return
+	}
+	var req struct {
+		Color string `json:"color"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid json", http.StatusBadRequest)
+		return
+	}
+	subject, err := h.ingest.UpdateSubjectColor(name, req.Color)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, http.StatusOK, subject)
 }
 
 func (h *APIHandler) entries(w http.ResponseWriter, r *http.Request) {

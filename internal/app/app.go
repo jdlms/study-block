@@ -32,7 +32,11 @@ func New() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	subjects := model.SubjectsFromNames(cfg.Subjects)
+	configuredSubjects := model.SubjectsFromNames(cfg.Subjects)
+	subjects, err := bootstrapSubjects(db, configuredSubjects)
+	if err != nil {
+		return nil, err
+	}
 	ingest := service.NewIngestService(db, subjects)
 	api := handler.NewAPIHandler(ingest, cfg.EnableLocalTestRoutes)
 	mux := http.NewServeMux()
@@ -115,4 +119,39 @@ func localURL(addr string) string {
 		return "http://localhost" + addr
 	}
 	return "http://" + addr
+}
+
+func bootstrapSubjects(db *store.Store, configured []model.Subject) ([]model.Subject, error) {
+	stored, err := db.LoadSubjects()
+	if err != nil {
+		return nil, err
+	}
+	if len(stored) == 0 {
+		if len(configured) == 0 {
+			return nil, fmt.Errorf("no subjects configured and none stored in database")
+		}
+		if err := db.SaveSubjects(configured); err != nil {
+			return nil, err
+		}
+		return configured, nil
+	}
+
+	seen := make(map[string]struct{}, len(stored))
+	merged := append([]model.Subject(nil), stored...)
+	for _, subject := range stored {
+		seen[subject.Name] = struct{}{}
+	}
+	for _, subject := range configured {
+		if _, ok := seen[subject.Name]; ok {
+			continue
+		}
+		subject.Color = model.DefaultSubjectColor(len(merged))
+		merged = append(merged, subject)
+	}
+	if len(merged) != len(stored) {
+		if err := db.SaveSubjects(merged); err != nil {
+			return nil, err
+		}
+	}
+	return merged, nil
 }

@@ -55,9 +55,6 @@ func parseSubjects(raw string) ([]string, error) {
 		seen[s] = struct{}{}
 		out = append(out, s)
 	}
-	if len(out) == 0 {
-		return nil, fmt.Errorf("SUBJECTS is required")
-	}
 	return out, nil
 }
 

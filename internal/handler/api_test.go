@@ -108,3 +108,66 @@ func TestEntriesPOST(t *testing.T) {
 		t.Fatalf("status = %d, want 201 body=%s", res.Code, res.Body.String())
 	}
 }
+
+func TestSubjectsPOST(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ingest := service.NewIngestService(db, []model.Subject{{Name: "math", Color: "#111"}})
+	h := NewAPIHandler(ingest, true)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/subjects", strings.NewReader(`{"name":"physics"}`))
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+
+	if res.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want 201 body=%s", res.Code, res.Body.String())
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/api/subjects", nil)
+	listRes := httptest.NewRecorder()
+	mux.ServeHTTP(listRes, listReq)
+	if listRes.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 body=%s", listRes.Code, listRes.Body.String())
+	}
+	var subjects []model.Subject
+	if err := json.NewDecoder(listRes.Body).Decode(&subjects); err != nil {
+		t.Fatal(err)
+	}
+	if len(subjects) != 2 || subjects[1].Name != "physics" {
+		t.Fatalf("subjects = %#v, want physics appended", subjects)
+	}
+}
+
+func TestSubjectColorPATCH(t *testing.T) {
+	db, err := store.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	ingest := service.NewIngestService(db, []model.Subject{{Name: "math", Color: "#111"}})
+	h := NewAPIHandler(ingest, true)
+	mux := http.NewServeMux()
+	h.Register(mux)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/subjects/math", strings.NewReader(`{"color":"#abcdef"}`))
+	req.Header.Set("Content-Type", "application/json")
+	res := httptest.NewRecorder()
+	mux.ServeHTTP(res, req)
+
+	if res.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 body=%s", res.Code, res.Body.String())
+	}
+	var subject model.Subject
+	if err := json.NewDecoder(res.Body).Decode(&subject); err != nil {
+		t.Fatal(err)
+	}
+	if subject.Color != "#abcdef" {
+		t.Fatalf("color = %q, want #abcdef", subject.Color)
+	}
+}
